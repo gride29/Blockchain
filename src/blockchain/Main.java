@@ -1,24 +1,53 @@
 package blockchain;
 
-import java.util.Scanner;
-import java.util.stream.Stream;
+import java.util.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 public class Main {
-    public static void main(String[] args) {
-        /* Block[] blockchain = new Block[5];
-        blockchain[0] = new Block("0");
-        for (int i = 1; i < blockchain.length; i++) {
-            blockchain[i] = new Block(blockchain[i - 1].getHash());
+
+    private static volatile BlockInfo info;
+
+    public static void main(String[] args) throws InterruptedException {
+        List<Block> blockchain = Collections.synchronizedList(new ArrayList<>());
+        ExecutorService miners = Executors.newCachedThreadPool();
+        BlockManager blockManager = new BlockManager(0, 0);
+
+        info = blockManager.createBlockInfo(null);
+        for (int i = 0; i < 4; i++) {
+            miners.submit(() -> {
+                while (blockchain.size() < 5) {
+                    final int size = blockchain.size();
+                    long start = System.nanoTime();
+
+                    String magic;
+                    String hash;
+                    Random rnd = new Random();
+
+                    do {
+                        magic = String.valueOf(rnd.nextInt());
+                        hash = blockManager.applySha256(info, magic);
+                    } while (!blockManager.validate(hash));
+
+                    int end = (int) ((System.nanoTime() - start) / 1_000_000_000);
+
+                    synchronized (Main.class) {
+                        Block block = blockManager.createBlock(info, magic);
+                        if (block != null && blockchain.size() == size) {
+                            info = blockManager.createBlockInfo(block);
+                            blockchain.add(block);
+                            System.out.println("\nBlock:");
+                            System.out.println("Created by miner # " + Thread.currentThread().getId());
+                            System.out.println(block);
+                            System.out.println("Block was generating for " + end + " seconds");
+                            blockManager.updateZeros(end, size + 1);
+                        }
+                    }
+                }
+            });
         }
-        Stream.of(blockchain).forEach(block -> System.out.println(block + "\n")); */
-        Block block = null;
-        Scanner scanner = new Scanner(System.in);
-        System.out.println("Enter how many zeros the hash must start with: ");
-        BlockManager manager = new BlockManager(scanner.nextInt(), block);
-        Block b1 = manager.createBlock();
-        Block b2 = manager.createBlock();
-        Block b3 = manager.createBlock();
-        Block b4 = manager.createBlock();
-        Block b5 = manager.createBlock();
+        miners.awaitTermination(10, TimeUnit.SECONDS);
+        miners.shutdown();
     }
 }

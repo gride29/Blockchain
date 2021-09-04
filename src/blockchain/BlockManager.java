@@ -4,38 +4,52 @@ import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.Date;
-import java.util.Random;
 
 public class BlockManager {
 
-    private final int zeros;
-    private Block block;
+    private volatile int zeros;
+    private volatile int averageTime;
 
-    public BlockManager(int zeros, Block block) {
+    public BlockManager(int zeros, int averageTime) {
         this.zeros = zeros;
-        this.block = block == null
-                ? new Block(BigInteger.ZERO, null, null, "0", null) : block;
+        this.averageTime = averageTime;
     }
 
-    public Block createBlock() {
-        long start = System.nanoTime();
-        BigInteger id = block.getId().add(BigInteger.ONE);
+    public Block createBlock(BlockInfo blockInfo, String magic) {
+        String hash = applySha256(blockInfo, magic);
+        return validate(hash) ? new Block(blockInfo, hash, magic) : null;
+    }
+
+    public BlockInfo createBlockInfo(Block block) {
+        BigInteger id = block == null ? BigInteger.ONE : block.getId().add(BigInteger.ONE);
         BigInteger timestamp = BigInteger.valueOf(new Date().getTime());
-        String magic, hash;
-        Random rnd = new Random();
-        do {
-            magic = String.valueOf(rnd.nextInt());
-            hash = applySha256(block.getHash(), id, timestamp, magic);
-        } while (!hash.startsWith("0".repeat(zeros)));
-        block = new Block(id, timestamp, block.getHash(), hash, magic);
-        long end = System.nanoTime() - start;
-        System.out.println("\n" + block);
-        System.out.println("Block was generating for " + end / 1_000_000_000 + " seconds");
-        return block;
+        String prevHash = block == null ? "0" : block.getHash();
+        return new BlockInfo(id, timestamp, prevHash);
     }
 
-    private String applySha256(String prevHash, BigInteger id, BigInteger timestamp, String magic) {
-        String data = prevHash + id + timestamp + magic;
+    public synchronized void updateZeros(int time, int size) {
+        this.averageTime = (averageTime + time) / size;
+        if (averageTime > time) {
+            zeros++;
+            System.out.println("N was increased to " + zeros);
+        } else if (averageTime == time) {
+            System.out.println("N stays the same");
+        } else {
+            // avoid number of zeros below 0
+            this.zeros = zeros == 0 ? 0 : zeros - 1;
+            System.out.println("N was decreased by " + zeros);
+        }
+    }
+
+    public boolean validate(String hash) {
+        return hash.startsWith("0".repeat(zeros));
+    }
+
+    public String applySha256(BlockInfo blockInfo, String magic) {
+        return applySha256(blockInfo.getPrevHash() + magic + blockInfo.getId() + blockInfo.getTimestamp());
+    }
+
+    public String applySha256(String data) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             byte[] hash = digest.digest(data.getBytes(StandardCharsets.UTF_8));

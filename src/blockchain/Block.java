@@ -44,6 +44,7 @@ public class Block implements Serializable {
                 "Hash of the previous block: \n" +
                 getPrevHash() + "\n" +
                 "Hash of the block: \n" +
-                getHash();
+                getHash() + "\n" +
+                "Block data: " + blockInfo.getMessage();
     }
 }

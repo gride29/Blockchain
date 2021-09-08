@@ -10,13 +10,14 @@ public class BlockInfo implements Serializable {
     private final BigInteger id;
     private final BigInteger timestamp;
     private final String prevHash;
-    private final List<Message> messages;
+    private List<Message> messages;
+    private final List<Transaction> transactions;
 
-    public BlockInfo(BigInteger id, BigInteger timestamp, String prevHash, List<Message> messages) {
+    public BlockInfo(BigInteger id, BigInteger timestamp, String prevHash, List<Transaction> transactions) {
         this.id = id;
         this.timestamp = timestamp;
         this.prevHash = prevHash;
-        this.messages = messages;
+        this.transactions = transactions;
     }
 
     public BigInteger getId() {
@@ -32,10 +33,16 @@ public class BlockInfo implements Serializable {
     }
 
     public String getMessages() {
-        return messages.isEmpty() ? "no messages" : messages.stream().map(Message::toString).collect(Collectors.joining("\n"));
+        return messages.isEmpty() ? "no messages" : "\n" + transactions.stream().map(Transaction::toString).collect(Collectors.joining("\n"));
+    }
+
+    public String getTransactions() {
+        return transactions.isEmpty() ? "no transactions" : "\n" + transactions.stream().map(Transaction::getData).collect(Collectors.joining("\n"));
     }
 
     public List<Message> getListOfMessages() {
         return messages;
     }
+
+    public List<Transaction> getListOfTransactions() { return transactions; }
 }

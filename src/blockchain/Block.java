@@ -2,6 +2,7 @@ package blockchain;
 
 import java.io.Serializable;
 import java.math.BigInteger;
+import java.util.List;
 
 public class Block implements Serializable {
 
@@ -10,8 +11,8 @@ public class Block implements Serializable {
     private final String hash;
     private final String magic;
 
-    public Block(BlockInfo blockInfo, String hash, String magic) {
-        this.blockInfo = blockInfo;
+    Block(BlockInfo info, String hash, String magic) {
+        this.blockInfo = info;
         this.hash = hash;
         this.magic = magic;
     }
@@ -45,6 +46,6 @@ public class Block implements Serializable {
                 getPrevHash() + "\n" +
                 "Hash of the block: \n" +
                 getHash() + "\n" +
-                "Block data: " + blockInfo.getMessage();
+                "Block data: " + blockInfo.getMessages();
     }
 }

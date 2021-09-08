@@ -1,5 +1,9 @@
 package blockchain;
 
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.security.SignatureException;
+import java.security.spec.InvalidKeySpecException;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -9,26 +13,32 @@ public class Main {
 
     private static volatile BlockInfo info;
     private static volatile List<String> TEMPLATE_MSG = new ArrayList<>(List.of(
-            "Sarah: it's not fair",
-            "Sarah: You always will be first because it is your blockchain!",
-            "Sarah: You always will be first because it is your blockchain!",
-            "Tom: You're welcome :)",
-            "Nick: Hey Tom, nice chat",
-            "Tom: Hey, I'm first!",
-            "Tom: That's nice msg",
-            "Nick: Is anybody out there?",
-            "Nick: im waiting!",
-            "Nick: Where is my blockchain?",
-            "Tom: It's not your blockchain..."
+            "it's not fair",
+            "You always will be first because it is your blockchain!",
+            "You always will be first because it is your blockchain!",
+            "You're welcome :)",
+            "Hey Tom, nice chat",
+            "Hey, I'm first!",
+            "That's nice msg",
+            "Is anybody out there?",
+            "im waiting!",
+            "Where is my blockchain?",
+            "It's not your blockchain..."
     ));
 
-    public static void main(String[] args) throws InterruptedException {
+    public static void main(String[] args) throws InterruptedException, NoSuchAlgorithmException, SignatureException, InvalidKeySpecException, InvalidKeyException {
         List<Block> blockchain = Collections.synchronizedList(new ArrayList<>());
-        List<String> messages = Collections.synchronizedList(new ArrayList<>());
+        List<Message> messages = Collections.synchronizedList(new ArrayList<>());
         ExecutorService miners = Executors.newCachedThreadPool();
         BlockManager blockManager = new BlockManager(0, 5);
         Random rnd = new Random();
-        info = blockManager.createBlockInfo(null, "");
+        final int keySize = 1024;
+        User[] users = new User[] {
+                new User("Garfield", keySize),
+                new User("John", keySize),
+                new User("Jordan", keySize)
+        };
+        info = blockManager.createBlockInfo(null, new ArrayList<>());
 
         for (int i = 0; i < 4; i++) {
             miners.submit(() -> {
@@ -51,8 +61,8 @@ public class Main {
                     synchronized (Main.class) {
                         Block block = blockManager.createBlock(info, magic);
                         if (block != null && blockchain.size() == size) {
-                            String message = String.join("\n", messages);
-                            info = blockManager.createBlockInfo(block, message);
+                            List<Message> copyOfMsg = new ArrayList<>(messages);
+                            info = blockManager.createBlockInfo(block, copyOfMsg);
                             // After the creation of the new block, all new messages that were sent during the creation
                             // should be included in the new block and deleted from the list.
                             messages.clear();
@@ -78,7 +88,7 @@ public class Main {
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
-            messages.add(TEMPLATE_MSG.get(rnd.nextInt(TEMPLATE_MSG.size())));
+            messages.add(new Message(users[rnd.nextInt(users.length)], TEMPLATE_MSG.get(rnd.nextInt(TEMPLATE_MSG.size()))));
         }
     }
 }
